@@ -272,27 +272,32 @@ remote_package_name.github_remote <- function(remote, url = "https://raw.githubu
 }
 
 #' @export
-remote_sha.github_remote <- function(remote, url = "https://github.com", ...) {
-  # If the remote ref is the same as the sha it is a pinned commit so just
-  # return that.
-  if (!is.null(remote$ref) && !is.null(remote$sha) &&
-    grepl(paste0("^", remote$ref), remote$sha)) {
+#' @references https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
+remote_sha.github_remote <- function(remote, ...) {
+  if (has_sha.github_remote(remote)) {
     return(remote$sha)
   }
 
-  tryCatch({
-    res <- git2r::remote_ls(
-      paste0(url, "/", remote$username, "/", remote$repo, ".git"),
-      ...)
+  owner <- remote$username
+  repo <- remote$repo
+  ref <- remote$ref
+  target_path <- file.path("repos", owner, repo, "commits", ref)
 
-    found <- grep(pattern = paste0("/", remote$ref), x = names(res))
-
-    if (length(found) == 0) {
+  tryCatch(
+    expr = {
+      response <- github_GET(path = target_path)
+      return(response$sha)
+    },
+    error = function(e) {
       return(NA_character_)
     }
+  )
+}
 
-    unname(res[found[1]])
-  }, error = function(e) NA_character_)
+has_sha.github_remote <- function(remote) {
+  return(!is.null(remote$ref) &&
+           !is.null(remote$sha) &&
+           grepl(paste0("^", remote$ref), remote$sha))
 }
 
 #' @export
