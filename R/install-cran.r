@@ -85,3 +85,7 @@ remote_sha.cran_remote <- function(remote, url = "https://github.com", ...) {
 format.cran_remote <- function(x, ...) {
   "CRAN"
 }
+
+as_github_remote.cran_remote <- function(cran_remote) {
+  github_remote(repo = paste0("cran/", cran_remote$name))
+}

@@ -121,9 +121,44 @@ dev_package_deps <- function(pkg = ".", dependencies = NA,
     # We set this cache in install() so we can run install_deps() twice without
     # having to re-query the remotes
     installing$remote_deps %||% remote_deps(pkg))
+
+  # Only keep dependencies we actually want to use
+  res <- res[res$package %in% deps, ]
+  res <- add_init_install_version(res, parsed)
+  res <- as_min_version_remote(res)
+  return(res)
 }
 
-filter_duplicate_deps <- function(cran_deps, remote_deps, dependencies) {
+as_min_version_remote <- function(package_dep) {
+  if (nrow(package_dep) == 0) {
+    return(package_dep)
+  }
+
+  for (i in 1:nrow(package_dep)) {
+    if (!is.na(package_dep$installed[i])) {
+      next()
+    }
+
+    remote <- package_dep$remote[i][[1L]]
+
+    if (inherits(remote, "cran_remote")) {
+      if (!is.na(package_dep$version[i])) {
+        tmp <- as_github_remote.cran_remote(remote)
+        tmp$ref <- as.character(package_dep$version[i])
+        package_dep$remote[i][[1L]] <- tmp
+      }
+    }
+
+    if (inherits(remote, "github_remote")) {
+      if (!is.na(package_dep$version[i])) {
+        package_dep$remote[i][[1L]]$ref <- package_dep$version[i]
+      }
+    }
+  }
+  return(package_dep)
+}
+
+filter_duplicate_deps <- function(cran_deps, remote_deps) {
   deps <- rbind(cran_deps, remote_deps)
 
   # Only keep the remotes that are specified in the cran_deps
@@ -132,6 +167,35 @@ filter_duplicate_deps <- function(cran_deps, remote_deps, dependencies) {
   # always be specified after the CRAN dependencies, so using fromLast will
   # filter out the CRAN dependencies.
   deps[!duplicated(deps$package, fromLast = TRUE), ]
+}
+
+add_init_install_version <- function(package_deps, parsed_deps) {
+  if (nrow(package_deps) == 0) {
+    return(package_deps)
+  }
+
+  unlist_parsed_deps <- function(col_name) {
+    unlist(lapply(parsed_deps, `[[`, col_name), use.names = FALSE)
+  }
+
+  pkg_names <- unlist_parsed_deps("name")
+  versions <- unlist_parsed_deps("version")
+  deps_versioned <- data.frame(package = pkg_names,
+                               version = versions)
+  deps_versioned <- deps_versioned[order(deps_versioned$version,
+                                         na.last = FALSE), ]
+  deps_versioned <- deps_versioned[!duplicated(deps_versioned$package,
+                                               fromLast = TRUE), ]
+
+  structure(
+    merge(
+      x = package_deps,
+      y = deps_versioned,
+      by = "package",
+      all = FALSE
+    ),
+    class = c("package_deps", "data.frame")
+  )
 }
 
 ## -2 = not installed, but available on CRAN
