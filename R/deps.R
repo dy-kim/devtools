@@ -280,6 +280,31 @@ remote_deps <- function(pkg) {
   diff <- installed == available
   diff <- ifelse(!is.na(diff) & diff, CURRENT, BEHIND)
 
+  is_github_remote <- vapply(remote, inherits, logical(1), "github_remote")
+  installed[is_github_remote] <-
+    vapply(
+      package,
+      FUN = function(x)
+        as.character(packageVersion(x)),
+      character(1)
+    )
+  installed_version_github_remote <-
+    package_version(installed[is_github_remote])
+
+  version_deps <- rbind(parse_deps(pkg[["depends"]]),
+                        parse_deps(pkg[["imports"]]))
+  remote_version_deps <- subset(version_deps, name %in% package)
+  required_version_github_remote <-
+    package_version(remote_version_deps$version[is_github_remote])
+
+  is_behind <- installed_version_github_remote < required_version_github_remote
+  is_current <- installed_version_github_remote == required_version_github_remote
+  is_ahead <- installed_version_github_remote > required_version_github_remote
+
+  diff[is_github_remote][is_behind] <- BEHIND
+  diff[is_github_remote][is_current] <- CURRENT
+  diff[is_github_remote][is_ahead] <- CURRENT
+
   res <- structure(
     data.frame(
       package = package,

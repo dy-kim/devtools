@@ -242,8 +242,15 @@ parse_git_repo <- function(path) {
 }
 
 #' @export
-remote_package_name.github_remote <- function(remote, url = "https://raw.githubusercontent.com", ...) {
+remote_package_name.github_remote <- function(remote, ...) {
+  remote_package_description.github_remote(remote)$Package
+}
 
+remote_package_version.github_remote <- function(remote, ...) {
+  remote_package_description.github_remote(remote)$Version
+}
+
+remote_package_description.github_remote <- function(remote) {
   tmp <- tempfile()
   path <- paste(c(
       remote$username,
@@ -268,7 +275,7 @@ remote_package_name.github_remote <- function(remote, url = "https://raw.githubu
     return(NA_character_)
   }
 
-  read_dcf(tmp)$Package
+  read_dcf(tmp)
 }
 
 #' @export
