@@ -302,7 +302,9 @@ get_actual_diff_for_github_remote <- function(pkg_deps, pkg) {
   remote_package_names <- pkg_deps$package
 
   DEFAULT_VERSION <- "0.0.0"
-  pkg_deps$installed[is_github_remote] <-
+  pkg_deps_tmp <- pkg_deps
+  pkg_deps_tmp$installed_no_na <- DEFAULT_VERSION
+  pkg_deps_tmp$installed_no_na[is_github_remote] <-
     vapply(
       remote_package_names,
       FUN = function(x) {
@@ -320,23 +322,23 @@ get_actual_diff_for_github_remote <- function(pkg_deps, pkg) {
                         parse_deps(pkg[["imports"]]))
   version_deps <- version_deps[c("name", "version")]
 
-  pkg_deps_req <- merge(
-    x = pkg_deps,
+  pkg_deps_tmp <- merge(
+    x = pkg_deps_tmp,
     y = version_deps,
     by.x = "package",
     by.y = "name"
   )
 
-  is_req_version_na <- is.na(pkg_deps_req$version)
-  pkg_deps_req$version[is_req_version_na] <- DEFAULT_VERSION
+  pkg_deps_tmp <- pkg_deps_tmp[order(pkg_deps_tmp$package), ]
+  pkg_deps <- pkg_deps[order(pkg_deps$package), ]
 
-  pkg_deps_req$required_ver <- NA
-  pkg_deps_req$installed_ver <- NA
+  is_req_version_na <- is.na(pkg_deps_tmp$version)
+  pkg_deps_tmp$version[is_req_version_na] <- DEFAULT_VERSION
 
   required_version_github_remote <-
-    package_version(pkg_deps_req$version[is_github_remote])
+    package_version(pkg_deps_tmp$version[is_github_remote])
   installed_version_github_remote <-
-    package_version(pkg_deps_req$installed[is_github_remote])
+    package_version(pkg_deps_tmp$installed_no_na[is_github_remote])
 
   is_behind <-
     installed_version_github_remote < required_version_github_remote
