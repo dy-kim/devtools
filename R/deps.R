@@ -136,7 +136,15 @@ as_min_version_remote <- function(package_dep) {
 
   for (i in 1:nrow(package_dep)) {
     if (!is.na(package_dep$installed[i])) {
-      next()
+      inst_ver <- packageVersion(package_dep$package[i])
+      if (is.na(package_dep$version[i])) {
+        next()
+      }
+      req_ver <- package_version(package_dep$version[i])
+
+      if (inst_ver >= req_ver) {
+        next()
+      }
     }
 
     remote <- package_dep$remote[i][[1L]]
@@ -151,7 +159,7 @@ as_min_version_remote <- function(package_dep) {
 
     if (inherits(remote, "github_remote")) {
       if (!is.na(package_dep$version[i])) {
-        package_dep$remote[i][[1L]]$ref <- package_dep$version[i]
+        package_dep$remote[i][[1L]]$ref <- as.character(package_dep$version[i])
       }
     }
   }
